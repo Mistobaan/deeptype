@@ -30,9 +30,10 @@ for LANGUAGE in $LANGUAGES
 do
     echo "Will prepare language: ${LANGUAGE}"
 done
-
+DOWNLOAD_DATA_DIR=/mnt/disks/data/deeptype/wikipedia/
 echo "Creating data directory"
 mkdir -p $DATA_DIR
+mkdir -p $DOWNLOAD_DATA_DIR
 echo "Done."
 
 echo "Downloading and preparing Wikidata:"
@@ -40,23 +41,23 @@ if [ -f "${DATA_DIR}latest-all.mp" ]
 then
     echo "Already compressed Wikidata"
 else
-    if [ -f "${DATA_DIR}latest-all.json" ]
+    if [ -f "${DOWNLOAD_DATA_DIR}latest-all.json" ]
     then
         echo "Already decompressed Wikidata"
-        python3 extraction/compress_wikidata_msgpack.py ${DATA_DIR}latest-all.json ${DATA_DIR}latest-all.mp
+        python3 extraction/compress_wikidata_msgpack.py ${DOWNLOAD_DATA_DIR}latest-all.json ${DATA_DIR}latest-all.mp
         rm ${DATA_DIR}latest-all.json
     else
-        if [ -f "${DATA_DIR}latest-all.json.bz2" ]
+        if [ -f "${DOWNLOAD_DATA_DIR}latest-all.json.bz2" ]
         then
             echo "Already downloaded ${DATA_DIR}latest-all.json.bz2"
             bzip2 -d -v4 ${DATA_DIR}latest-all.json.bz2
-            python3 extraction/compress_wikidata_msgpack.py ${DATA_DIR}latest-all.json ${DATA_DIR}latest-all.mp
-            rm ${DATA_DIR}latest-all.json
+            python3 extraction/compress_wikidata_msgpack.py ${DOWNLOAD_DATA_DIR}latest-all.json ${DATA_DIR}latest-all.mp
+            #rm ${DATA_DIR}latest-all.json
         else
             wget -O ${DATA_DIR}latest-all.json.bz2 https://dumps.wikimedia.org/wikidatawiki/entities/latest-all.json.bz2
             bzip2 -d -v4 ${DATA_DIR}latest-all.json.bz2
             python3 extraction/compress_wikidata_msgpack.py ${DATA_DIR}latest-all.json ${DATA_DIR}latest-all.mp
-            rm ${DATA_DIR}latest-all.json
+            #rm ${DATA_DIR}latest-all.json
         fi
     fi
 fi
@@ -74,7 +75,6 @@ do
         wget -O ${DATA_DIR}${LANGUAGE}wiki-latest-pages-articles.xml.bz2 https://dumps.wikimedia.org/${LANGUAGE}wiki/latest/${LANGUAGE}wiki-latest-pages-articles.xml.bz2
         bzip2 -d -v4 ${DATA_DIR}${LANGUAGE}wiki-latest-pages-articles.xml.bz2
     fi
-    python3 extraction/get_redirection_category_links.py ${DATA_DIR}${LANGUAGE}wiki-latest-pages-articles.xml ${DATA_DIR}${LANGUAGE}_anchors.tsv ${DATA_DIR}${LANGUAGE}_redirections.tsv ${DATA_DIR}${LANGUAGE}_category_links.tsv
     python3 extraction/convert_category_links_to_wikidata.py ${DATA_DIR}wikidata/wikititle2wikidata.marisa ${DATA_DIR}wikidata/wikidata_ids.txt ${LANGUAGE}wiki ${DATA_DIR}${LANGUAGE}_category_links.tsv ${DATA_DIR}wikidata/
     python3 extraction/convert_anchor_tags_to_wikidata.py ${DATA_DIR}wikidata/wikititle2wikidata.marisa ${LANGUAGE}wiki ${DATA_DIR}${LANGUAGE}_anchors.tsv ${DATA_DIR}${LANGUAGE}_redirections.tsv ${DATA_DIR}${LANGUAGE}_trie
     # apply link fixing strategy here:

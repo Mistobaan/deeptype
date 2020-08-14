@@ -1,3 +1,7 @@
+# distutils: language = c++
+# cython: language_level=3 
+# cython: c_string_type=unicode, c_string_encoding=utf8
+
 cimport cython
 from libcpp.vector cimport vector
 from libcpp cimport bool

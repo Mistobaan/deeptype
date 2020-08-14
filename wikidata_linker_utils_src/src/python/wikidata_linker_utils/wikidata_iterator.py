@@ -39,7 +39,7 @@ def iterate_text_jsons(fin, batch_size=1000):
 
 def iterate_message_packs(fin):
 
-    unpacker = msgpack.Unpacker(fin, encoding='utf-8', use_list=False)
+    unpacker = msgpack.Unpacker(fin, use_list=False)
     for obj in unpacker:
         yield obj
 

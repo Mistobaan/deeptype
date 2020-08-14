@@ -1,3 +1,7 @@
+# distutils: language = c++
+# cython: language_level=3 
+# cython: c_string_type=unicode, c_string_encoding=utf8
+
 cimport cython
 
 from cython.operator cimport dereference as deref
@@ -27,7 +31,11 @@ cdef extern from "stdio.h" nogil:
     int fclose(FILE *)
     #ssize_t getline(char **lineptr, size_t *n, FILE *stream);
     ssize_t getline(char **, size_t *, FILE *)
+    #define TAB_CHAR 9
+    #define NEWLINE_CHAR 10
 
+# cdef extern from "<iostream>" namespace "std":
+#     cdef std::ios
 
 cdef class RedirectionsHolder(object):
     cdef unordered_map[string, string] _redirections
@@ -44,7 +52,7 @@ cdef class RedirectionsHolder(object):
         cdef size_t read
         cdef char[256] source
         cdef char[256] dest
-        cdef char* uppercased_in_python
+        cdef string uppercased_in_python
         cdef char* tab_pos
         cdef char* end_pos
 
@@ -54,10 +62,10 @@ cdef class RedirectionsHolder(object):
                 if read == -1:
                     break
 
-                tab_pos = strchr(line, '\t')
+                tab_pos = strchr(line, 9) # tab
                 if (tab_pos - line) > 256 or tab_pos == NULL:
                     continue
-                end_pos = strchr(tab_pos, '\n')
+                end_pos = strchr(tab_pos, 10) # newline
                 if (end_pos - tab_pos) > 256:
                     continue
                 return_code = sscanf(line, "%256[^\n\t]\t%256[^\n]", &source, &dest)
@@ -67,7 +75,7 @@ cdef class RedirectionsHolder(object):
                     decoded = source.decode("utf-8")
                     decoded = (decoded[0].upper() + decoded[1:]).encode("utf-8")
                     uppercased_in_python = decoded
-                self._redirections[string(uppercased_in_python)] = string(dest)
+                self._redirections[uppercased_in_python] = dest
         fclose(cfile)
 
     def __len__(self):
@@ -953,10 +961,10 @@ def construct_mapping(anchor_trie,
             if count % 10000 == 0:
                 with gil:
                     pbar.update(count)
-            tab_pos = strchr(line, '\t')
+            tab_pos = strchr(line, 9)
             if (tab_pos - line) > 256 or tab_pos == NULL:
                 continue
-            end_pos = strchr(tab_pos, '\n')
+            end_pos = strchr(tab_pos, 10)
             if (end_pos - tab_pos) > 256:
                 continue
             return_code = sscanf(line, "%256[^\n\t]\t%256[^\n\t]\t%256[^\n\t]", &context, &anchor, &target)
@@ -1038,10 +1046,10 @@ def iterate_anchor_lines(anchor_tags,
             if count % 1000 == 0:
                 with gil:
                     pbar.update(count)
-            tab_pos = strchr(line, '\t')
+            tab_pos = strchr(line, 9)
             if (tab_pos - line) > 256 or tab_pos == NULL:
                 continue
-            end_pos = strchr(tab_pos, '\n')
+            end_pos = strchr(tab_pos, 10)
             if (end_pos - tab_pos) > 256:
                 continue
             return_code = sscanf(line, "%256[^\n\t]\t%256[^\n\t]\t%256[^\n\t]", &context, &anchor, &target)
@@ -1049,7 +1057,7 @@ def iterate_anchor_lines(anchor_tags,
                 num_broken += 1
                 continue
 
-            anchor_string = string(anchor)
+            anchor_string = anchor
             if visited.find(anchor_string) == visited.end():
                 with gil:
                     try:
@@ -1072,7 +1080,7 @@ def iterate_anchor_lines(anchor_tags,
                     else:
                         num_missing += 1
                         with nogil:
-                            missing.push_back(pair[string, string](anchor_string, string(target)))
+                            missing.push_back(pair[string, string](anchor_string, target))
     fclose(cfile)
     pbar.finish()
     print("%d/%d anchor_tags could not be found in wikidata" % (num_missing, num_lines))
