@@ -47,7 +47,7 @@ def induce_wikipedia_prefix(wikiname):
         return wikiname
     else:
         raise ValueError("Could not determine prefix for wiki "
-                         "with name %r." % (wikiname,))
+                        "with name %r." % (wikiname,))
 
 
 def convert_sql_to_lookup(props, propname):

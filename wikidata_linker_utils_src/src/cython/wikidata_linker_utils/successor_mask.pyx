@@ -72,7 +72,7 @@ cdef class RedirectionsHolder(object):
                 if return_code != 2:
                     continue
                 with gil:
-                    decoded = source.decode("utf-8")
+                    decoded = source
                     decoded = (decoded[0].upper() + decoded[1:]).encode("utf-8")
                     uppercased_in_python = decoded
                 self._redirections[uppercased_in_python] = dest
@@ -88,18 +88,18 @@ cdef class RedirectionsHolder(object):
         cdef unordered_map[string, string].iterator finder = self._redirections.find(key.encode("utf-8"))
         if finder == self._redirections.end():
             raise KeyError(key)
-        return deref(finder).second.decode("utf-8")
+        return deref(finder).second
 
     def get(self, key, default=None):
         cdef unordered_map[string, string].iterator finder = self._redirections.find(key.encode("utf-8"))
         if finder == self._redirections.end():
             return default
-        return deref(finder).second.decode("utf-8")
+        return deref(finder).second
 
     def _asdict(self):
         out = {}
         for kv in self._redirections:
-            out[kv.first.decode("utf-8")] = kv.second.decode("utf-8")
+            out[kv.first] = kv.second
         return out
 
 
@@ -974,7 +974,7 @@ def construct_mapping(anchor_trie,
             with gil:
                 try:
                     target_int = match_wikipedia_to_wikidata(
-                        target.decode("utf-8"),
+                        target,
                         wikipedia2wikidata_trie,
                         redirections,
                         prefix
@@ -983,11 +983,11 @@ def construct_mapping(anchor_trie,
                     continue
 
                 if target_int != -1:
-                    cleaned_up = clean_up_trie_source(anchor.decode("utf-8"))
+                    cleaned_up = clean_up_trie_source(anchor)
                     if len(cleaned_up) > 0:
                         anchor_int = anchor_trie[cleaned_up]
                         context_int = match_wikipedia_to_wikidata(
-                            context.decode("utf-8"),
+                            context,
                             wikipedia2wikidata_trie,
                             redirections,
                             prefix
@@ -1062,7 +1062,7 @@ def iterate_anchor_lines(anchor_tags,
                 with gil:
                     try:
                         target_int = match_wikipedia_to_wikidata(
-                            target.decode("utf-8"),
+                            target,
                             wikipedia2wikidata_trie,
                             redirections,
                             prefix
@@ -1074,7 +1074,7 @@ def iterate_anchor_lines(anchor_tags,
                     if target_int != -1:
                         with nogil:
                             visited.insert(anchor_string)
-                        source = clean_up_trie_source(anchor.decode("utf-8"))
+                        source = clean_up_trie_source(anchor)
                         if len(source) > 0:
                             yield source
                     else:
@@ -1088,7 +1088,7 @@ def iterate_anchor_lines(anchor_tags,
     print("Missing anchor_tags sample:")
     cdef int i = 0
     for kv in missing:
-        print("    " + kv.first.decode("utf-8") + " -> " + kv.second.decode("utf-8"))
+        print("    " + kv.first + " -> " + kv.second)
         i += 1
         if i == 10:
             break

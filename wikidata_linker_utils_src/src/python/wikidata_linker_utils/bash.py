@@ -14,7 +14,7 @@ def execute_bash(command):
     for line in process.stdout:
         print(line, end='', flush=True)
     process.wait()
-    assert process.returncode == 0
+    assert process.returncode == 0, process.returncode
 
 
 def get_bash_result(command):
@@ -29,7 +29,7 @@ def get_bash_result(command):
                                universal_newlines=True)
     out = [line for line in process.stdout]
     process.wait()
-    assert process.returncode == 0
+    assert process.returncode == 0, '\n'.join(out)
     return out
 
 
