@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument('--export_classification', type=str, nargs="+",
         default=None,
         help="Location to save the result of the entity classification.")
-    parser.add_argument('--num_names_to_load', type=int, default=20000000,
+    parser.add_argument('--num_names_to_load', type=int, default=20_000_000,
         help="Number of names to load from disk to accelerate reporting.")
     parser.add_argument('--language_path', type=str, default=None,
         help="Location of a language-wikipedia specific information set to "

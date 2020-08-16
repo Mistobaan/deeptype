@@ -55,7 +55,7 @@ python3 extraction/evaluate_type_system.py extraction/configs/en_disambiguator_c
 ```bash
 export DATA_DIR=data/
 python3 extraction/produce_wikidata_tsv.py extraction/configs/en_disambiguator_config_export_small.json --relative_to ${DATA_DIR} sample_data.tsv
-python3 learning/evaluate_learnability.py sample_data.tsv --out report.json --wikidata ${DATA_DIR}wikidata/
+python3 learning/evaluate_learnability.py --dataset sample_data.tsv --out report.json --wikidata ${DATA_DIR}wikidata/
 ```
 
 See `learning/LearnabilityStudy.ipynb` for a visual analysis of the AUC scores.

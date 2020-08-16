@@ -57,8 +57,8 @@ def load_oracle_classification(path):
 
 
 def can_disambiguate(oracles, truth, alternatives,
-                     times_pointed, count_threshold,
-                     ignore_other=False, keep_other=False):
+                    times_pointed, count_threshold,
+                    ignore_other=False, keep_other=False):
     ambig = np.ones(len(alternatives), dtype=np.bool)
     for oracle in oracles:
         truth_pred = oracle.classify(truth)
@@ -280,9 +280,10 @@ def summarize_disambiguation(total_report, file=None):
     print("", file=file)
 
 
-def summarize_ambiguities(ambiguous_tags,
-                          oracles,
-                          get_name):
+def summarize_ambiguities(
+    ambiguous_tags,
+    oracles,
+    get_name):
     class_ambiguities = {}
     for anchor, dest, other_dest, times_pointed in ambiguous_tags:
         class_ambig_name = []
@@ -319,7 +320,6 @@ def summarize_ambiguities(ambiguous_tags,
 
 def get_prefix(config):
     return config.prefix or induce_wikipedia_prefix(config.wiki)
-
 
 
 def fix_and_parse_tags(config, collection, size):
