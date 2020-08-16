@@ -28,21 +28,30 @@ import numpy as np
 import marisa_trie
 
 from wikidata_linker_utils.type_collection import get_name, TypeCollection
-from wikidata_linker_utils.logic import logical_and, logical_ands, logical_not, logical_or, logical_ors
+from wikidata_linker_utils.logic import (
+    logical_and,
+    logical_ands,
+    logical_not,
+    logical_or,
+    logical_ors,
+)
 from wikidata_linker_utils.progressbar import get_progress_bar
 from wikidata_linker_utils.offset_array import OffsetArray
 from wikidata_linker_utils.file import true_exists
 import wikidata_linker_utils.wikidata_properties as wprop
 
 from wikidata_linker_utils.successor_mask import (
-    related_promote_highest, extend_relations, reduce_values,
-    remap_offset_array
+    related_promote_highest,
+    extend_relations,
+    reduce_values,
+    remap_offset_array,
 )
 
 SCRIPT_DIR = dirname(realpath(__file__))
 
 from numpy import logical_not, logical_or, logical_and
 from wikidata_linker_utils.logic import logical_ors
+
 IS_HISTORY = None
 IS_PEOPLE = None
 IS_BREED = None
@@ -65,11 +74,14 @@ IS_THOROUGHFARE = None
 IS_KINSHIP = None
 IS_EPISODE_LIST = None
 
+
 def wkp(c, name):
-    return c.article2id['enwiki/' + name][0][0]
+    return c.article2id["enwiki/" + name][0][0]
+
 
 def wkd(c, name):
     return c.name2index[name]
+
 
 def initialize_globals(c):
     """global variables that guide the metonymy/anaphora removal process."""
@@ -143,7 +155,7 @@ def initialize_globals(c):
     EVENT_OCCURRENCE = wkd(c, "Q1190554")
     ELECTROMAGNETIC_SPECTRUM = wkd(c, "Q133139")
     MAGICAL_ORG = wkd(c, "Q14946195")
-    AUTONOM_CHURCH = wkd(c, "Q20871948")
+    AUTONOM_CHURCH = wkd(c, "Q6566418")
     SIGN = wkd(c, "Q3695082")
     FORM_OF_GOVERNMENT = wkd(c, "Q1307214")
     SPORTS_ORG = wkd(c, "Q4438121")
@@ -165,34 +177,64 @@ def initialize_globals(c):
 
     IS_CHARACTER_HUMAN = c.satisfy(
         [wprop.INSTANCE_OF, wprop.SUBCLASS_OF, wprop.IS_A_LIST_OF],
-        [HUMAN, FICTIONAL_HUMAN, FICTIONAL_CHARACTER]
+        [HUMAN, FICTIONAL_HUMAN, FICTIONAL_CHARACTER],
     )
     # to be a history you must be an aspect of history
     # but not a history itself:
     IS_HISTORY = logical_and(
         c.satisfy([wprop.INSTANCE_OF], [ASPECT_OF_HIST]),
-        logical_not(c.satisfy([wprop.INSTANCE_OF], [HISTORY]))
+        logical_not(c.satisfy([wprop.INSTANCE_OF], [HISTORY])),
     )
     IS_PEOPLE = c.satisfy([wprop.INSTANCE_OF, wprop.SUBCLASS_OF], [PEOPLE, NATIONALITY])
     IS_PEOPLE_GROUP = np.logical_or(
         IS_PEOPLE,
-        c.satisfy([wprop.INSTANCE_OF, wprop.SUBCLASS_OF], [GROUP_OF_HUMANS, MAGICAL_ORG, AUTONOM_CHURCH])
+        c.satisfy(
+            [wprop.INSTANCE_OF, wprop.SUBCLASS_OF],
+            [GROUP_OF_HUMANS, MAGICAL_ORG, AUTONOM_CHURCH],
+        ),
     )
     IS_LIST_ARTICLE = c.satisfy([wprop.INSTANCE_OF], [LIST_ARTICLE])
-    IS_LANGUAGE_ALPHABET = c.satisfy([wprop.INSTANCE_OF, wprop.SUBCLASS_OF],
-        [LANGUAGE, ALPHABET, ORTHOGRAPHY, SIGN_SYSTEM]
+    IS_LANGUAGE_ALPHABET = c.satisfy(
+        [wprop.INSTANCE_OF, wprop.SUBCLASS_OF],
+        [LANGUAGE, ALPHABET, ORTHOGRAPHY, SIGN_SYSTEM],
     )
-    IS_COUNTRY = c.satisfy([wprop.INSTANCE_OF], [COUNTRY, FORMER_COUNTRY, DOMINION, COLONY, STATE, DYNASTY, GOVERNORATE])
-    IS_SPORTS_TEAM = c.satisfy([wprop.INSTANCE_OF, wprop.SUBCLASS_OF, wprop.PART_OF], [SPORTS_TEAM, ATHLETIC_CONFERENCE, SPORTS_ORG, RECURRING_SPORTING_EVENT])
+    IS_COUNTRY = c.satisfy(
+        [wprop.INSTANCE_OF],
+        [COUNTRY, FORMER_COUNTRY, DOMINION, COLONY, STATE, DYNASTY, GOVERNORATE],
+    )
+    IS_SPORTS_TEAM = c.satisfy(
+        [wprop.INSTANCE_OF, wprop.SUBCLASS_OF, wprop.PART_OF],
+        [SPORTS_TEAM, ATHLETIC_CONFERENCE, SPORTS_ORG, RECURRING_SPORTING_EVENT],
+    )
     IS_CARDINAL_DIRECTION = c.satisfy([wprop.INSTANCE_OF], [CARDINAL_DIRECTION])
-    IS_POLITICAL_PARTY = c.satisfy([wprop.INSTANCE_OF, wprop.SUBCLASS_OF], [POLITICAL_PARTY])
-    IS_SOCIETY = c.satisfy([wprop.INSTANCE_OF, wprop.SUBCLASS_OF], [SOCIETY, HISTORICAL_PERIOD])
+    IS_POLITICAL_PARTY = c.satisfy(
+        [wprop.INSTANCE_OF, wprop.SUBCLASS_OF], [POLITICAL_PARTY]
+    )
+    IS_SOCIETY = c.satisfy(
+        [wprop.INSTANCE_OF, wprop.SUBCLASS_OF], [SOCIETY, HISTORICAL_PERIOD]
+    )
     IS_POSITION = c.satisfy([wprop.INSTANCE_OF, wprop.SUBCLASS_OF], [POSITION])
     IS_BREED = c.satisfy([wprop.INSTANCE_OF, wprop.SUBCLASS_OF], [BREED])
-    IS_POLITICAL_ORGANIZATION = c.satisfy([wprop.INSTANCE_OF, wprop.SUBCLASS_OF], [POLITICAL_ORGANIZATION, FORM_OF_GOVERNMENT])
-    IS_LANDFORM = c.satisfy([wprop.INSTANCE_OF, wprop.SUBCLASS_OF], [LANDFORM, TERRITORIAL_ENTITY, GEOGRAPHIC_OBJECT, ASTRO_OBJECT, WATERCOURSE, BODY_OF_WATER])
-    IS_EVENT_SPORT = c.satisfy([wprop.SUBCLASS_OF, wprop.PART_OF, wprop.INSTANCE_OF], [EVENT_SPORTING, SPORT])
-    IS_THING = c.satisfy([wprop.INSTANCE_OF, wprop.SUBCLASS_OF],
+    IS_POLITICAL_ORGANIZATION = c.satisfy(
+        [wprop.INSTANCE_OF, wprop.SUBCLASS_OF],
+        [POLITICAL_ORGANIZATION, FORM_OF_GOVERNMENT],
+    )
+    IS_LANDFORM = c.satisfy(
+        [wprop.INSTANCE_OF, wprop.SUBCLASS_OF],
+        [
+            LANDFORM,
+            TERRITORIAL_ENTITY,
+            GEOGRAPHIC_OBJECT,
+            ASTRO_OBJECT,
+            WATERCOURSE,
+            BODY_OF_WATER,
+        ],
+    )
+    IS_EVENT_SPORT = c.satisfy(
+        [wprop.SUBCLASS_OF, wprop.PART_OF, wprop.INSTANCE_OF], [EVENT_SPORTING, SPORT]
+    )
+    IS_THING = c.satisfy(
+        [wprop.INSTANCE_OF, wprop.SUBCLASS_OF],
         [
             AUTOMOBILE_MODEL,
             FOOD,
@@ -209,8 +251,8 @@ def initialize_globals(c):
             AUDIOVISUAL,
             CLASS_SCHEME,
             WORK,
-            ELECTROMAGNETIC_SPECTRUM
-        ]
+            ELECTROMAGNETIC_SPECTRUM,
+        ],
     )
     IS_THOROUGHFARE = c.satisfy([wprop.INSTANCE_OF, wprop.SUBCLASS_OF], [THOROUGHFARE])
     IS_ACTIVITY = c.satisfy([wprop.INSTANCE_OF], [ACTIVITY])
@@ -243,9 +285,13 @@ def parse_args():
     parser.add_argument("wikidata")
     parser.add_argument("language_path")
     parser.add_argument("new_language_path")
-    parser.add_argument("--steps", type=int, default=3,
+    parser.add_argument(
+        "--steps",
+        type=int,
+        default=3,
         help="how many time should fixing be recursed (takes "
-             "about 2mn per step. Has diminishing returns).")
+        "about 2mn per step. Has diminishing returns).",
+    )
     return parser.parse_args()
 
 
@@ -260,13 +306,9 @@ def get_trie_properties(trie, offsets, values):
     return anchor_length
 
 
-def fix(collection,
-        offsets,
-        values,
-        counts,
-        anchor_length,
-        num_category_link=8,
-        keep_min=5):
+def fix(
+    collection, offsets, values, counts, anchor_length, num_category_link=8, keep_min=5
+):
     relations_that_can_extend = [
         {"steps": [wprop.INSTANCE_OF]},
         {"steps": [wprop.INSTANCE_OF, (wprop.SUBCLASS_OF, 2)]},
@@ -282,7 +324,7 @@ def fix(collection,
         {"steps": [wprop.CATEGORY_LINK, wprop.CATEGORYS_MAIN_TOPIC]},
         {"steps": [(wprop.CATEGORY_LINK, num_category_link), wprop.FIXED_POINTS]},
         {"steps": [wprop.CATEGORY_LINK, wprop.FIXED_POINTS, wprop.IS_A_LIST_OF]},
-        {"steps": [wprop.IS_A_LIST_OF, (wprop.SUBCLASS_OF, 2)]}
+        {"steps": [wprop.IS_A_LIST_OF, (wprop.SUBCLASS_OF, 2)]},
     ]
     relation_data = get_relation_data(collection, relations_that_can_extend)
     new_values = values
@@ -297,24 +339,20 @@ def fix(collection,
         counts,
         condition=is_history,
         alternative=is_people_mask,
-        keep_min=keep_min
+        keep_min=keep_min,
     )
     unchanged = values == new_values
-    is_not_history_or_list = logical_and(
-        logical_not(is_history), logical_not(is_list)
-    )
+    is_not_history_or_list = logical_and(logical_not(is_history), logical_not(is_list))
     new_values = related_promote_highest(
         new_values,
         offsets,
         counts,
         condition=logical_and(is_history, unchanged),
         alternative=is_not_history_or_list,
-        keep_min=keep_min
+        keep_min=keep_min,
     )
 
-    is_sport_or_thoroughfare = logical_or(
-        IS_EVENT_SPORT, IS_THOROUGHFARE
-    )[new_values]
+    is_sport_or_thoroughfare = logical_or(IS_EVENT_SPORT, IS_THOROUGHFARE)[new_values]
 
     # delete these references:
     new_values[anchor_length < 2] = -1
@@ -334,21 +372,26 @@ def fix(collection,
         counts,
         alternative=is_not_people,
         pbar=get_progress_bar("extend_relations", max_value=len(offsets), item="links"),
-        keep_min=keep_min
+        keep_min=keep_min,
     )
     unchanged = values == new_values
     # remove all non-modified values that are
     # not instances of anything, nor subclasses of anything:
-    new_values[logical_ands(
-        [
-            logical_ands([
-                collection.relation(wprop.INSTANCE_OF).edges() == 0,
-                collection.relation(wprop.SUBCLASS_OF).edges() == 0,
-                collection.relation(wprop.PART_OF).edges() == 0,
-                collection.relation(wprop.CATEGORY_LINK).edges() == 0
-            ])[new_values],
-            unchanged
-        ])] = -1
+    new_values[
+        logical_ands(
+            [
+                logical_ands(
+                    [
+                        collection.relation(wprop.INSTANCE_OF).edges() == 0,
+                        collection.relation(wprop.SUBCLASS_OF).edges() == 0,
+                        collection.relation(wprop.PART_OF).edges() == 0,
+                        collection.relation(wprop.CATEGORY_LINK).edges() == 0,
+                    ]
+                )[new_values],
+                unchanged,
+            ]
+        )
+    ] = -1
 
     is_kinship = IS_KINSHIP[new_values]
     is_human = IS_CHARACTER_HUMAN[new_values]
@@ -358,7 +401,7 @@ def fix(collection,
         counts,
         condition=is_human,
         alternative=is_kinship,
-        keep_min=keep_min
+        keep_min=keep_min,
     )
 
     # replace elements by a country
@@ -367,24 +410,26 @@ def fix(collection,
     should_replace_by_country = logical_ands(
         [
             logical_not(
-                logical_ors([
-                    IS_POLITICAL_ORGANIZATION,
-                    IS_CARDINAL_DIRECTION,
-                    IS_LANGUAGE_ALPHABET,
-                    IS_COUNTRY,
-                    IS_PEOPLE_GROUP,
-                    IS_BREED,
-                    IS_BATTLE,
-                    IS_SOCIETY,
-                    IS_POSITION,
-                    IS_POLITICAL_PARTY,
-                    IS_SPORTS_TEAM,
-                    IS_CHARACTER_HUMAN,
-                    IS_LANDFORM,
-                    IS_ACTIVITY
-                ])
+                logical_ors(
+                    [
+                        IS_POLITICAL_ORGANIZATION,
+                        IS_CARDINAL_DIRECTION,
+                        IS_LANGUAGE_ALPHABET,
+                        IS_COUNTRY,
+                        IS_PEOPLE_GROUP,
+                        IS_BREED,
+                        IS_BATTLE,
+                        IS_SOCIETY,
+                        IS_POSITION,
+                        IS_POLITICAL_PARTY,
+                        IS_SPORTS_TEAM,
+                        IS_CHARACTER_HUMAN,
+                        IS_LANDFORM,
+                        IS_ACTIVITY,
+                    ]
+                )
             )[new_values],
-            counts < 100
+            counts < 100,
         ]
     )
 
@@ -392,24 +437,23 @@ def fix(collection,
     is_country_or_cardinal = [
         IS_CARDINAL_DIRECTION,
         IS_COUNTRY,
-        IS_POLITICAL_ORGANIZATION
+        IS_POLITICAL_ORGANIZATION,
     ]
     for i, alternative in enumerate(is_country_or_cardinal):
         unchanged = values == new_values
-        should_replace_by_country = logical_and(
-            should_replace_by_country, unchanged
-        )
+        should_replace_by_country = logical_and(should_replace_by_country, unchanged)
         new_values = related_promote_highest(
             new_values,
             offsets,
             counts,
             condition=should_replace_by_country,
             alternative=alternative[new_values],
-            keep_min=keep_min
+            keep_min=keep_min,
         )
 
     new_offsets, new_values, new_counts, location_shift = reduce_values(
-        offsets, new_values, counts)
+        offsets, new_values, counts
+    )
 
     return (new_offsets, new_values, new_counts), location_shift
 
@@ -439,19 +483,20 @@ def remap_trie_offset_array(old_trie, new_trie, offsets_values_counts):
 def main():
     args = parse_args()
     if args.new_language_path == args.language_path:
-        raise ValueError("new_language_path and language_path must be "
-                         "different: cannot generate a fixed trie in "
-                         "the same directory as the original trie.")
+        raise ValueError(
+            "new_language_path and language_path must be "
+            "different: cannot generate a fixed trie in "
+            "the same directory as the original trie."
+        )
 
     c = TypeCollection(args.wikidata, num_names_to_load=0)
     c.load_blacklist(join(SCRIPT_DIR, "blacklist.json"))
-    original_values = np.load(
-        join(args.language_path, "trie_index2indices_values.npy"))
+    original_values = np.load(join(args.language_path, "trie_index2indices_values.npy"))
     original_offsets = np.load(
-        join(args.language_path, "trie_index2indices_offsets.npy"))
-    original_counts = np.load(
-        join(args.language_path, "trie_index2indices_counts.npy"))
-    original_trie_path = join(args.language_path, 'trie.marisa')
+        join(args.language_path, "trie_index2indices_offsets.npy")
+    )
+    original_counts = np.load(join(args.language_path, "trie_index2indices_counts.npy"))
+    original_trie_path = join(args.language_path, "trie.marisa")
     trie = marisa_trie.Trie().load(original_trie_path)
     initialize_globals(c)
     t0 = time.time()
@@ -466,7 +511,7 @@ def main():
             values=values,
             counts=counts,
             anchor_length=anchor_length,
-            num_category_link=8
+            num_category_link=8,
         )
         if old_location_shift is not None:
             # see where newly shifted values are now pointing
@@ -477,17 +522,18 @@ def main():
         pre_reduced_values = values[location_shift]
         pre_reduced_values[location_shift == -1] = -1
         num_changes = int((pre_reduced_values != original_values).sum())
-        change_volume = int((original_counts[pre_reduced_values != original_values].sum()))
-        print("step %d with %d changes, %d total links" % (
-            step, num_changes, change_volume)
+        change_volume = int(
+            (original_counts[pre_reduced_values != original_values].sum())
+        )
+        print(
+            "step %d with %d changes, %d total links"
+            % (step, num_changes, change_volume)
         )
     pre_reduced_values = values[location_shift]
     pre_reduced_values[location_shift == -1] = -1
     t1 = time.time()
     num_changes = int((pre_reduced_values != original_values).sum())
-    print("Done with link fixing in %.3fs, with %d changes." % (
-        t1 - t0, num_changes)
-    )
+    print("Done with link fixing in %.3fs, with %d changes." % (t1 - t0, num_changes))
 
     # show some remappings:
     np.random.seed(1234)
@@ -496,32 +542,31 @@ def main():
         np.where(
             np.logical_and(
                 np.logical_and(
-                    pre_reduced_values != original_values,
-                    pre_reduced_values != -1
+                    pre_reduced_values != original_values, pre_reduced_values != -1
                 ),
-                original_values != -1
+                original_values != -1,
             )
         )[0],
         size=num_samples,
-        replace=False
+        replace=False,
     )
     print("Sample fixes:")
     for index in samples:
-        print("   %r (%d) -> %r (%d)" % (
+        print(
+            "   %r (%d) -> %r (%d)"
+            % (
                 c.get_name(int(original_values[index])),
                 int(original_values[index]),
                 c.get_name(int(pre_reduced_values[index])),
-                int(pre_reduced_values[index])
+                int(pre_reduced_values[index]),
             )
         )
     print("")
 
     samples = np.random.choice(
-        np.where(
-            OffsetArray(values, offsets).edges() == 0
-        )[0],
+        np.where(OffsetArray(values, offsets).edges() == 0)[0],
         size=num_samples,
-        replace=False
+        replace=False,
     )
     print("Sample deletions:")
     for index in samples:
@@ -530,9 +575,7 @@ def main():
     # prune out anchors where there are no more linked items:
     print("Removing empty anchors from trie...")
     t0 = time.time()
-    non_empty_offsets = np.where(
-        OffsetArray(values, offsets).edges() != 0
-    )[0]
+    non_empty_offsets = np.where(OffsetArray(values, offsets).edges() != 0)[0]
     fixed_trie = filter_trie(trie, non_empty_offsets)
 
     contexts_found = true_exists(
@@ -540,55 +583,65 @@ def main():
     )
     if contexts_found:
         contexts_values = np.load(
-            join(args.language_path, "trie_index2contexts_values.npy"))
+            join(args.language_path, "trie_index2contexts_values.npy")
+        )
         contexts_offsets = np.load(
-            join(args.language_path, "trie_index2contexts_offsets.npy"))
+            join(args.language_path, "trie_index2contexts_offsets.npy")
+        )
         contexts_counts = np.load(
-            join(args.language_path, "trie_index2contexts_counts.npy"))
+            join(args.language_path, "trie_index2contexts_counts.npy")
+        )
 
     to_port = [
         (offsets, values, counts),
-        (original_offsets, pre_reduced_values, original_values)
+        (original_offsets, pre_reduced_values, original_values),
     ]
     if contexts_found:
-        to_port.append(
-             (contexts_offsets, contexts_values, contexts_counts)
-        )
+        to_port.append((contexts_offsets, contexts_values, contexts_counts))
 
     ported = remap_trie_offset_array(trie, fixed_trie, to_port)
     offsets, values, counts = ported[0]
     original_offsets, pre_reduced_values, original_values = ported[1]
     t1 = time.time()
-    print("Removed %d empty anchors from trie in %.3fs" % (
-        len(trie) - len(fixed_trie), t1 - t0,)
+    print(
+        "Removed %d empty anchors from trie in %.3fs"
+        % (len(trie) - len(fixed_trie), t1 - t0,)
     )
 
     print("Saving...")
     makedirs(args.new_language_path, exist_ok=True)
 
-    np.save(join(args.new_language_path, "trie_index2indices_values.npy"),
-            values)
-    np.save(join(args.new_language_path, "trie_index2indices_offsets.npy"),
-            offsets)
-    np.save(join(args.new_language_path, "trie_index2indices_counts.npy"),
-            counts)
+    np.save(join(args.new_language_path, "trie_index2indices_values.npy"), values)
+    np.save(join(args.new_language_path, "trie_index2indices_offsets.npy"), offsets)
+    np.save(join(args.new_language_path, "trie_index2indices_counts.npy"), counts)
     if contexts_found:
         contexts_offsets, contexts_values, contexts_counts = ported[2]
-        np.save(join(args.new_language_path, "trie_index2contexts_values.npy"),
-                contexts_values)
-        np.save(join(args.new_language_path, "trie_index2contexts_offsets.npy"),
-                contexts_offsets)
-        np.save(join(args.new_language_path, "trie_index2contexts_counts.npy"),
-                contexts_counts)
-    new_trie_path = join(args.new_language_path, 'trie.marisa')
+        np.save(
+            join(args.new_language_path, "trie_index2contexts_values.npy"),
+            contexts_values,
+        )
+        np.save(
+            join(args.new_language_path, "trie_index2contexts_offsets.npy"),
+            contexts_offsets,
+        )
+        np.save(
+            join(args.new_language_path, "trie_index2contexts_counts.npy"),
+            contexts_counts,
+        )
+    new_trie_path = join(args.new_language_path, "trie.marisa")
     fixed_trie.save(new_trie_path)
 
     transition = np.vstack([original_values, pre_reduced_values]).T
-    np.save(join(args.new_language_path, "trie_index2indices_transition_values.npy"),
-            transition)
-    np.save(join(args.new_language_path, "trie_index2indices_transition_offsets.npy"),
-            original_offsets)
+    np.save(
+        join(args.new_language_path, "trie_index2indices_transition_values.npy"),
+        transition,
+    )
+    np.save(
+        join(args.new_language_path, "trie_index2indices_transition_offsets.npy"),
+        original_offsets,
+    )
     print("Done.")
+
 
 if __name__ == "__main__":
     main()

@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -x
 # stop script on error and print it
 set -e
 # inform me of undefined variables
@@ -75,6 +76,8 @@ do
         wget -O ${DATA_DIR}${LANGUAGE}wiki-latest-pages-articles.xml.bz2 https://dumps.wikimedia.org/${LANGUAGE}wiki/latest/${LANGUAGE}wiki-latest-pages-articles.xml.bz2
         bzip2 -d -v4 ${DATA_DIR}${LANGUAGE}wiki-latest-pages-articles.xml.bz2
     fi
+    
+    python3 extraction/get_redirection_category_links.py ${DATA_DIR}${LANGUAGE}wiki-latest-pages-articles.xml ${DATA_DIR}${LANGUAGE}_anchors.tsv ${DATA_DIR}${LANGUAGE}_redirections.tsv ${DATA_DIR}${LANGUAGE}_category_links.tsv
     python3 extraction/convert_category_links_to_wikidata.py ${DATA_DIR}wikidata/wikititle2wikidata.marisa ${DATA_DIR}wikidata/wikidata_ids.txt ${LANGUAGE}wiki ${DATA_DIR}${LANGUAGE}_category_links.tsv ${DATA_DIR}wikidata/
     python3 extraction/convert_anchor_tags_to_wikidata.py ${DATA_DIR}wikidata/wikititle2wikidata.marisa ${LANGUAGE}wiki ${DATA_DIR}${LANGUAGE}_anchors.tsv ${DATA_DIR}${LANGUAGE}_redirections.tsv ${DATA_DIR}${LANGUAGE}_trie
     # apply link fixing strategy here:
