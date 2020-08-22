@@ -12,10 +12,13 @@ from wikidata_linker_utils.progressbar import get_progress_bar
 from wikidata_linker_utils.wikipedia import induce_wikipedia_prefix
 from os.path import realpath, dirname, join, exists
 from wikidata_linker_utils.fast_disambiguate import (
-    beam_project, cem_project, ga_project
+    beam_project,
+    cem_project,
+    ga_project,
 )
 
 SCRIPT_DIR = dirname(realpath(__file__))
+
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
@@ -28,18 +31,15 @@ def parse_args(args=None):
     parser.add_argument("--log", default=None, type=str)
     parser.add_argument("--samples", type=int, default=1000)
     parser.add_argument("--ngen", type=int, default=40)
-    parser.add_argument("--method", type=str,
-        choices=["cem", "greedy", "beam", "ga"],
-        default="greedy")
+    parser.add_argument(
+        "--method", type=str, choices=["cem", "greedy", "beam", "ga"], default="greedy"
+    )
     return parser.parse_args(args=args)
 
 
 def load_aucs():
     paths = [
-        "/home/jonathanraiman/en_field_auc_w10_e10.json",
-        "/home/jonathanraiman/en_field_auc_w10_e10-s1234.json",
-        "/home/jonathanraiman/en_field_auc_w5_e5.json",
-        "/home/jonathanraiman/en_field_auc_w5_e5-s1234.json"
+        "/home/fabriziomilo/content/src/ranking-research/docker/deeptype/deeptype/report.json"
     ]
     aucs = {}
     for path in paths:
@@ -54,6 +54,7 @@ def load_aucs():
     for key in aucs.keys():
         aucs[key] = np.mean(aucs[key])
     return aucs
+
 
 def greedy_disambiguate(tags):
     greedy_correct = 0
@@ -75,7 +76,10 @@ def fast_disambiguate(tags, all_classifications):
         if len(other_dest) == 1 and dest == other_dest[0]:
             correct += 1
         else:
-            identities = np.all(all_classifications[other_dest, :] == all_classifications[dest, :], axis=1)
+            identities = np.all(
+                all_classifications[other_dest, :] == all_classifications[dest, :],
+                axis=1,
+            )
             matches = other_dest[identities]
             matches_counts = times_pointed[identities]
             if len(matches) == 1 and matches[0] == dest:
@@ -91,14 +95,13 @@ def get_prefix(config):
 
 MAX_PICKS = 400.0
 
-def rollout(cached_satisfy, key2row, tags, aucs, ids, sample,
-            penalty, greedy_correct):
+
+def rollout(cached_satisfy, key2row, tags, aucs, ids, sample, penalty, greedy_correct):
     mean_auc = 0.0
     sample_sum = sample.sum()
     if sample_sum == 0:
         total = len(tags)
-        return (greedy_correct / total,
-                greedy_correct / total)
+        return (greedy_correct / total, greedy_correct / total)
     if sample_sum > MAX_PICKS:
         return 0.0, 0.0
     all_classifications = None
@@ -116,7 +119,8 @@ def rollout(cached_satisfy, key2row, tags, aucs, ids, sample,
     improvement = correct - greedy_correct
     # penalty for using unreliable types:
     objective = (
-        (greedy_correct + improvement * mean_auc) / total -
+        (greedy_correct + improvement * mean_auc) / total
+        -
         # number of items is penalized
         sample_sum * penalty
     )
@@ -127,8 +131,12 @@ def get_cached_satisfy(collection, aucs, ids, mmap=False):
     path = join(SCRIPT_DIR, "cached_satisfy.npy")
     if not exists(path):
         cached_satisfy = np.zeros((len(aucs), len(ids)), dtype=np.bool)
-        for row, (qid, relation_name) in get_progress_bar("satisfy", item="types")(enumerate(sorted(aucs.keys()))):
-            cached_satisfy[row, :] = collection.satisfy([relation_name], [collection.name2index[qid]])[ids]
+        for row, (qid, relation_name) in (
+            enumerate(sorted(list(aucs.keys())))
+        ):
+            cached_satisfy[row, :] = collection.satisfy(
+                [relation_name], [collection.name2index[qid]]
+            )[ids]
             collection._satisfy_cache.clear()
         np.save(path, cached_satisfy)
         if mmap:
@@ -146,11 +154,7 @@ def main():
     args = parse_args()
     config = load_config(
         args.config,
-        ["wiki",
-         "language_path",
-         "wikidata",
-         "redirections",
-         "classification"],
+        ["wiki", "language_path", "wikidata", "redirections", "classification"],
         defaults={
             "num_names_to_load": 0,
             "prefix": None,
@@ -158,9 +162,9 @@ def main():
             "wiki": None,
             "fix_links": False,
             "min_count": 0,
-            "min_percent": 0.0
+            "min_percent": 0.0,
         },
-        relative_to=args.relative_to
+        relative_to=args.relative_to,
     )
     if config.wiki is None:
         raise ValueError("must provide path to 'wiki' in config.")
@@ -169,18 +173,25 @@ def main():
         config.wikidata,
         num_names_to_load=config.num_names_to_load,
         prefix=prefix,
-        verbose=True
+        verbose=True,
     )
     collection.load_blacklist(join(SCRIPT_DIR, "blacklist.json"))
 
     fname = config.wiki
-    test_tags = fix_and_parse_tags(config,
-                                   collection,
-                                   config.sample_size)
+    test_tags = fix_and_parse_tags(config, collection, config.sample_size)
     aucs = load_aucs()
-    ids = sorted(set([idx for doc_tags in test_tags
-                      for _, tag in doc_tags if tag is not None
-                      for idx in tag[2] if len(tag[2]) > 1]))
+    ids = sorted(
+        set(
+            [
+                idx
+                for doc_tags in test_tags
+                for _, tag in doc_tags
+                if tag is not None
+                for idx in tag[2]
+                if len(tag[2]) > 1
+            ]
+        )
+    )
     id2pos = {idx: k for k, idx in enumerate(ids)}
     # use reduced identity system:
     remapped_tags = []
@@ -188,14 +199,21 @@ def main():
         for text, tag in doc_tags:
             if tag is not None:
                 remapped_tags.append(
-                    (id2pos[tag[1]] if len(tag[2]) > 1 else tag[1],
-                     np.array([id2pos[idx] for idx in tag[2]]) if len(tag[2]) > 1 else tag[2],
-                     tag[3]))
+                    (
+                        id2pos[tag[1]] if len(tag[2]) > 1 else tag[1],
+                        np.array([id2pos[idx] for idx in tag[2]])
+                        if len(tag[2]) > 1
+                        else tag[2],
+                        tag[3],
+                    )
+                )
     test_tags = remapped_tags
 
     aucs = {key: value for key, value in aucs.items() if value > 0.5}
     print("%d relations to pick from with %d ids." % (len(aucs), len(ids)), flush=True)
-    cached_satisfy = get_cached_satisfy(collection, aucs, ids, mmap=args.method=="greedy")
+    cached_satisfy = get_cached_satisfy(
+        collection, aucs, ids, mmap=args.method == "greedy"
+    )
     del collection
     key2row = {key: k for k, key in enumerate(sorted(aucs.keys()))}
 
@@ -208,7 +226,7 @@ def main():
             ids,
             beam_width=1,
             penalty=args.penalty,
-            log=args.log
+            log=args.log,
         )
     elif args.method == "beam":
         picks, _ = beam_project(
@@ -219,7 +237,7 @@ def main():
             ids,
             beam_width=args.beam_width,
             penalty=args.penalty,
-            log=args.log
+            log=args.log,
         )
     elif args.method == "cem":
         picks, _ = cem_project(
@@ -230,7 +248,7 @@ def main():
             ids,
             n_samples=args.samples,
             penalty=args.penalty,
-            log=args.log
+            log=args.log,
         )
     elif args.method == "ga":
         picks, _ = ga_project(
@@ -242,7 +260,7 @@ def main():
             ngen=args.ngen,
             n_samples=args.samples,
             penalty=args.penalty,
-            log=args.log
+            log=args.log,
         )
     else:
         raise ValueError("unknown method %r." % (args.method,))
